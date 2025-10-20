@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Kleines Einmaleins Mathetest</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; }
+        .aufgabe { margin-bottom: 15px; }
+        label { font-weight: bold; }
+        input[type="text"] { width: 60px; }
+        .btn { margin-top: 20px; }
+        table { border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Mathetest: Kleines Einmaleins</h1>
+    <div id="reihen-auswahl" style="margin-bottom:20px;">
+        <label>Wähle Reihen:</label>
+        <!-- Checkboxen für Reihen 1 bis 10 -->
+        <label><input type="checkbox" value="1" checked> 1er</label>
+        <label><input type="checkbox" value="2" checked> 2er</label>
+        <label><input type="checkbox" value="3" checked> 3er</label>
+        <label><input type="checkbox" value="4" checked> 4er</label>
+        <label><input type="checkbox" value="5" checked> 5er</label>
+        <label><input type="checkbox" value="6" checked> 6er</label>
+        <label><input type="checkbox" value="7" checked> 7er</label>
+        <label><input type="checkbox" value="8" checked> 8er</label>
+        <label><input type="checkbox" value="9" checked> 9er</label>
+        <label><input type="checkbox" value="10" checked> 10er</label>
+        <button onclick="neueAufgaben()">Neue Aufgaben generieren</button>
+    </div>
+    <form id="mathetest">
+        <table border="1" cellpadding="8" style="border-collapse:collapse;">
+            <tbody id="aufgaben-tabelle">
+                <!-- Aufgaben werden hier eingefügt -->
+            </tbody>
+        </table>
+    </form>
+    <button class="btn" onclick="auswerten()">Auswerten</button>
+    <div id="ergebnis" style="margin-top:20px; font-size:1.2em;"></div>
+
+    <script>
+        let aufgaben = [];
+
+        function getGewaehlteReihen() {
+            return Array.from(document.querySelectorAll('#reihen-auswahl input[type="checkbox"]:checked'))
+                .map(cb => parseInt(cb.value));
+        }
+
+        function generiereAufgaben() {
+            const reihen = getGewaehlteReihen();
+            aufgaben = [];
+            if (reihen.length === 0) return;
+            while (aufgaben.length < 30) {
+                const reihe = reihen[Math.floor(Math.random() * reihen.length)];
+                const faktor = Math.floor(Math.random() * 10) + 1;
+                const typ = Math.floor(Math.random() * 3); // 0: erster Faktor fehlt, 1: zweiter Faktor fehlt, 2: Produkt fehlt
+
+                let feldname = 'a' + aufgaben.length;
+                let zelle1, zelle2, zelle3;
+                let loesung;
+
+                if (typ === 0) {
+                    // Erster Faktor fehlt
+                    zelle1 = `<input type="number" name="${feldname}" maxlength="2" autocomplete="off">`;
+                    zelle2 = faktor;
+                    zelle3 = reihe * faktor;
+                    loesung = reihe;
+                } else if (typ === 1) {
+                    // Zweiter Faktor fehlt
+                    zelle1 = reihe;
+                    zelle2 = `<input type="number" name="${feldname}" maxlength="2" autocomplete="off">`;
+                    zelle3 = reihe * faktor;
+                    loesung = faktor;
+                } else {
+                    // Produkt fehlt
+                    zelle1 = reihe;
+                    zelle2 = faktor;
+                    zelle3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                    loesung = reihe * faktor;
+                }
+                aufgaben.push({ zelle1, zelle2, zelle3, loesung });
+            }
+        }
+
+        function zeigeAufgaben() {
+            const tbody = document.getElementById('aufgaben-tabelle');
+            tbody.innerHTML = '';
+            aufgaben.forEach((aufgabe, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${aufgabe.zelle1}</td>
+                    <td style="text-align:center;">×</td>
+                    <td style="text-align:center;">${aufgabe.zelle2}</td>
+                    <td style="text-align:center;">=</td>
+                    <td style="text-align:center;">${aufgabe.zelle3}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('ergebnis').innerText = '';
+        }
+
+        function neueAufgaben() {
+            generiereAufgaben();
+            zeigeAufgaben();
+        }
+
+        function auswerten() {
+            let richtig = 0;
+            aufgaben.forEach((aufgabe, idx) => {
+                const feld = document.getElementsByName('a' + idx)[0];
+                if (feld && feld.value.trim() !== '' && Number(feld.value) === aufgabe.loesung) {
+                    richtig++;
+                    feld.style.background = '#c8f7c5';
+                } else if (feld) {
+                    feld.style.background = '#f7c5c5';
+                }
+            });
+            document.getElementById('ergebnis').innerText = `Du hast ${richtig} von 30 Aufgaben richtig gelöst.`;
+        }
+
+        // Initiale Aufgaben generieren und anzeigen
+        neueAufgaben();
+    </script>
+</body>
+</html>
