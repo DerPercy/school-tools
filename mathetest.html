@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Kleines Einmaleins Mathetest</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; }
+        .aufgabe { margin-bottom: 15px; }
+        label { font-weight: bold; }
+        input[type="text"], input[type="number"] { width: 60px; }
+        .btn { margin-top: 20px; }
+        table { border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+
+        /* Modal / Hunderterraum Styles */
+        .overlay {
+            position: fixed;
+            left: 0; top: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: white;
+            padding: 16px;
+            border-radius: 6px;
+            max-width: 720px;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .hundert-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 4px;
+            margin-top: 10px;
+        }
+        .hundert-cell {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 6px;
+            font-size: 12px;
+            text-align: center;
+            user-select: none;
+        }
+
+        /* Farben für Block-Visualisierung (Gruppen von Feldern) */
+        .swatch { width:18px; height:14px; border:1px solid #aaa; display:inline-block; vertical-align:middle; margin-right:6px; }
+        .modal-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+        .close-btn {
+            background:#eee;border:1px solid #ccc;padding:4px 8px;border-radius:4px;cursor:pointer;
+        }
+        .small-btn {
+            padding:4px 8px; font-size:12px; margin-left:6px;
+        }
+
+        .legende { display:flex; flex-wrap:wrap; gap:12px; margin-top:8px; align-items:center; font-size:0.95em; }
+
+        /* Kontrast für markierte Felder (Produkt) */
+        .hundert-cell.product {
+            box-shadow: inset 0 0 0 2px rgba(0,0,0,0.06);
+            font-weight: bold;
+        }
+
+        /* Zahlen standardmäßig ausgeblendet; über Button 3-Zustände: 0 versteckt, 1 letzte Zahl pro Gruppe, 2 alle Zahlen */
+        .hundert-cell .num {
+            visibility: hidden;
+        }
+        .hundert-grid.show-numbers .num {
+            visibility: visible;
+        }
+        /* nur die letzte Zahl jeder Farbgruppe anzeigen */
+        .hundert-grid.show-last .num {
+            visibility: hidden;
+        }
+        .hundert-grid.show-last .num.group-last {
+            visibility: visible;
+        }
+        .hundert-cell.struck .num { text-decoration: line-through; color: rgba(0,0,0,0.9); }
+        /* Durchgestrichene Zellen für Subtraktion */
+        .hundert-cell.struck { 
+            opacity: 0.8;
+            position: relative;
+        }
+        .hundert-cell.struck::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 50%;
+            border-top: 2px solid rgba(0,0,0,0.5);
+            transform: rotate(-45deg);
+        }
+        .hundert-cell.struck::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 50%;
+            border-top: 2px solid rgba(0,0,0,0.5);
+            transform: rotate(45deg);
+        }
+    </style>
+</head>
+<body>
+    <h1>Mathetest</h1>
+    <div id="reihen-auswahl" style="margin-bottom:20px;">
+        <label>Wähle Reihen:</label>
+        <!-- Checkboxen für Reihen 1 bis 10 -->
+        <label><input type="checkbox" value="1" checked> 1er</label>
+        <label><input type="checkbox" value="2" checked> 2er</label>
+        <label><input type="checkbox" value="3" checked> 3er</label>
+        <label><input type="checkbox" value="4" checked> 4er</label>
+        <label><input type="checkbox" value="5" checked> 5er</label>
+        <label><input type="checkbox" value="6" checked> 6er</label>
+        <label><input type="checkbox" value="7" checked> 7er</label>
+        <label><input type="checkbox" value="8" checked> 8er</label>
+        <label><input type="checkbox" value="9" checked> 9er</label>
+        <label><input type="checkbox" value="10" checked> 10er</label>
+
+        <!-- Neue Auswahl: Operationen -->
+        <span style="margin-left:12px; font-weight:bold;">Operation:</span>
+        <label style="margin-left:6px;"><input type="checkbox" value="mul" checked id="op-mul"> Multiplikation</label>
+        <label style="margin-left:6px;"><input type="checkbox" value="div" id="op-div"> Division</label>
+        <label style="margin-left:6px;"><input type="checkbox" value="add" id="op-add"> Addition</label>
+        <label style="margin-left:6px;"><input type="checkbox" value="sub" id="op-sub"> Subtraktion</label>
+
+        <div style="margin-top:8px;">
+            <label style="margin-left:6px;">
+                <input type="checkbox" id="nur-ergebnis"> Eingabefeld nur beim Ergebnis
+            </label>
+        </div>
+
+        <button onclick="neueAufgaben()">Neue Aufgaben generieren</button>
+    </div>
+    <form id="mathetest">
+        <table border="1" cellpadding="8" style="border-collapse:collapse;">
+            <tbody id="aufgaben-tabelle">
+                <!-- Aufgaben werden hier eingefügt -->
+            </tbody>
+        </table>
+    </form>
+    <button class="btn" onclick="auswerten()">Auswerten</button>
+    <div id="ergebnis" style="margin-top:20px; font-size:1.2em;"></div>
+
+    <script>
+        let aufgaben = [];
+
+        function getGewaehlteReihen() {
+            return Array.from(document.querySelectorAll('#reihen-auswahl input[type="checkbox"]:checked'))
+                .filter(cb => !cb.id) // ignore op-checkboxes here
+                .map(cb => parseInt(cb.value));
+        }
+
+        function getGewaehlteOps() {
+            const ops = [];
+            if (document.getElementById('op-mul').checked) ops.push('mul');
+            if (document.getElementById('op-div').checked) ops.push('div');
+            if (document.getElementById('op-add').checked) ops.push('add');
+            if (document.getElementById('op-sub').checked) ops.push('sub');
+            return ops;
+        }
+
+        function randomFrom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        // Hilfsfunktion: zufällige ganze Zahl zwischen min und max (inkl.)
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function generiereAufgaben() {
+            const reihen = getGewaehlteReihen();
+            const ops = getGewaehlteOps();
+            const nurErgebnis = document.getElementById('nur-ergebnis').checked;
+            aufgaben = [];
+            if (reihen.length === 0 || ops.length === 0) return;
+            while (aufgaben.length < 30) {
+                const op = ops[Math.floor(Math.random() * ops.length)];
+                if (op === 'mul') {
+                    const reihe = randomFrom(reihen);
+                    const faktor = Math.floor(Math.random() * 10) + 1;
+                    let feldname = 'a' + aufgaben.length;
+                    let zelle1, zelle2, zelle3;
+                    let loesung;
+
+                    if (nurErgebnis) {
+                        // Immer Produkt als Eingabefeld
+                        zelle1 = reihe;
+                        zelle2 = faktor;
+                        zelle3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                        loesung = reihe * faktor;
+                    } else {
+                        // Wie bisher: zufällig eine Position
+                        const typ = Math.floor(Math.random() * 3);
+                        if (typ === 0) {
+                            zelle1 = `<input type="number" name="${feldname}" maxlength="2" autocomplete="off">`;
+                            zelle2 = faktor;
+                            zelle3 = reihe * faktor;
+                            loesung = reihe;
+                        } else if (typ === 1) {
+                            zelle1 = reihe;
+                            zelle2 = `<input type="number" name="${feldname}" maxlength="2" autocomplete="off">`;
+                            zelle3 = reihe * faktor;
+                            loesung = faktor;
+                        } else {
+                            zelle1 = reihe;
+                            zelle2 = faktor;
+                            zelle3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            loesung = reihe * faktor;
+                        }
+                    }
+                    aufgaben.push({ op: 'mul', zelle1, zelle2, zelle3, loesung, reihe, faktor });
+                } else if (op === 'div') {
+                    const divisor = randomFrom(reihen);
+                    const quotient = Math.floor(Math.random() * 10) + 1;
+                    const dividend = divisor * quotient;
+                    let feldname = 'a' + aufgaben.length;
+                    let zelle1, zelle2, zelle3;
+                    let loesung;
+
+                    if (nurErgebnis) {
+                        // Immer Quotient als Eingabefeld
+                        zelle1 = dividend;
+                        zelle2 = divisor;
+                        zelle3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                        loesung = quotient;
+                    } else {
+                        const typ = Math.floor(Math.random() * 3);
+                        if (typ === 0) {
+                            zelle1 = dividend;
+                            zelle2 = divisor;
+                            zelle3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            loesung = quotient;
+                        } else if (typ === 1) {
+                            zelle1 = dividend;
+                            zelle2 = `<input type="number" name="${feldname}" maxlength="2" autocomplete="off">`;
+                            zelle3 = quotient;
+                            loesung = divisor;
+                        } else {
+                            zelle1 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            zelle2 = divisor;
+                            zelle3 = quotient;
+                            loesung = dividend;
+                        }
+                    }
+                    aufgaben.push({ op: 'div', zelle1, zelle2, zelle3, loesung, reihe: divisor, faktor: quotient, dividend });
+                } else if (op === 'add') {
+                    const x = randomInt(1, 99);
+                    const y = randomInt(1, 100 - x);
+                    const sum = x + y;
+                    let feldname = 'a' + aufgaben.length;
+                    let z1, z2, z3, loes;
+
+                    if (nurErgebnis) {
+                        // Immer Summe als Eingabefeld
+                        z1 = x;
+                        z2 = y;
+                        z3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                        loes = sum;
+                    } else {
+                        const typ = Math.floor(Math.random() * 3);
+                        if (typ === 0) {
+                            z1 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            z2 = y;
+                            z3 = sum;
+                            loes = x;
+                        } else if (typ === 1) {
+                            z1 = x;
+                            z2 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            z3 = sum;
+                            loes = y;
+                        } else {
+                            z1 = x;
+                            z2 = y;
+                            z3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            loes = sum;
+                        }
+                    }
+                    aufgaben.push({ op: 'add', zelle1: z1, zelle2: z2, zelle3: z3, loesung: loes, x, y, sum });
+                } else if (op === 'sub') {
+                    const minuend = randomInt(1, 100);
+                    const subtrahend = randomInt(0, minuend);
+                    const diff = minuend - subtrahend;
+                    let feldname = 'a' + aufgaben.length;
+                    let z1, z2, z3, loes;
+
+                    if (nurErgebnis) {
+                        // Immer Differenz als Eingabefeld
+                        z1 = minuend;
+                        z2 = subtrahend;
+                        z3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                        loes = diff;
+                    } else {
+                        const typ = Math.floor(Math.random() * 3);
+                        if (typ === 0) {
+                            z1 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            z2 = subtrahend;
+                            z3 = diff;
+                            loes = minuend;
+                        } else if (typ === 1) {
+                            z1 = minuend;
+                            z2 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            z3 = diff;
+                            loes = subtrahend;
+                        } else {
+                            z1 = minuend;
+                            z2 = subtrahend;
+                            z3 = `<input type="number" name="${feldname}" maxlength="3" autocomplete="off">`;
+                            loes = diff;
+                        }
+                    }
+                    aufgaben.push({ op: 'sub', zelle1: z1, zelle2: z2, zelle3: z3, loesung: loes, minuend, subtrahend, diff });
+                }
+            }
+        }
+
+        function zeigeAufgaben() {
+            const tbody = document.getElementById('aufgaben-tabelle');
+            tbody.innerHTML = '';
+            aufgaben.forEach((aufgabe, idx) => {
+                const tr = document.createElement('tr');
+                let symbol = '×';
+                if (aufgabe.op === 'div') symbol = '÷';
+                if (aufgabe.op === 'add') symbol = '+';
+                if (aufgabe.op === 'sub') symbol = '−';
+                tr.innerHTML = `
+                    <td style="text-align:center;">${aufgabe.zelle1}</td>
+                    <td style="text-align:center;">${symbol}</td>
+                    <td style="text-align:center;">${aufgabe.zelle2}</td>
+                    <td style="text-align:center;">=</td>
+                    <td style="text-align:center;">${aufgabe.zelle3}</td>
+                    <td style="text-align:center;"><button class="small-btn" onclick="zeigeLoesung(${idx});return false;">Zeige Lösung</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('ergebnis').innerText = '';
+        }
+
+        function neueAufgaben() {
+            generiereAufgaben();
+            zeigeAufgaben();
+        }
+
+        function auswerten() {
+            let richtig = 0;
+            aufgaben.forEach((aufgabe, idx) => {
+                const feld = document.getElementsByName('a' + idx)[0];
+                if (feld && feld.value.trim() !== '' && Number(feld.value) === aufgabe.loesung) {
+                    richtig++;
+                    feld.style.background = '#c8f7c5';
+                } else if (feld) {
+                    feld.style.background = '#f7c5c5';
+                }
+            });
+            document.getElementById('ergebnis').innerText = `Du hast ${richtig} von 30 Aufgaben richtig gelöst.`;
+        }
+
+        // Visualisierung im Hunderterraum: unterstützt mul/div (Gruppen) und add/sub (zwei Gruppen)
+        // Visualisierung im Hunderterraum: unterstützt mul/div (Gruppen) und add/sub (zwei Gruppen)
+        function zeigeLoesung(idx) {
+            const a = aufgaben[idx];
+            if (!a) return;
+
+            const colors = ['#ffd699', '#cfe9ff', '#fff3cc', '#c8f7c5', '#f8d1ec', '#d6f0e6', '#ffe0e0', '#e9e0ff', '#f0f7d8', '#dbeafc'];
+
+            // Build visualization metadata depending on operation
+            let title, groups; // groups: array of {size, label, struck}
+            if (a.op === 'mul') {
+                const total = a.reihe * a.faktor;
+                title = `${a.reihe} × ${a.faktor} = ${total}`;
+                groups = [];
+                // Bei Multiplikation: reihe = erster Faktor = Anzahl der Gruppen
+                //                     faktor = zweiter Faktor = Länge jeder Gruppe
+                for (let b = 0; b < a.reihe; b++) {
+                    groups.push({ 
+                        size: a.faktor, 
+                        label: `Gruppe ${b+1} (${a.faktor} Felder)`, 
+                        struck: false 
+                    });
+                }
+            } else if (a.op === 'div') {
+                const total = a.dividend;
+                title = `${a.dividend} ÷ ${a.reihe} = ${a.faktor}`;
+                groups = [];
+                // Bei Division: reihe = Divisor = Anzahl der Gruppen
+                //              faktor = Quotient = Länge jeder Gruppe
+                for (let b = 0; b < a.reihe; b++) {
+                    groups.push({ 
+                        size: a.faktor, 
+                        label: `Gruppe ${b+1} (${a.faktor} Felder)`, 
+                        struck: false 
+                    });
+                }
+            } else if (a.op === 'sub') {
+                title = `${a.minuend} − ${a.subtrahend} = ${a.diff}`;
+                groups = [
+                    { size: a.diff, label: `Differenz (${a.diff})`, struck: false },
+                    { size: a.subtrahend, label: `Subtrahend (${a.subtrahend})`, struck: true }
+                ];
+            } else if (a.op === 'add' || a.op === 'sub') {
+                // For addition: first summand colored, then second summand colored (contiguous)
+                // For subtraction: show minuend as first block (difference), then subtrahend as second block (struck)
+                const g1 = a.op === 'add' ? a.x : a.minuend;
+                const g2 = a.op === 'add' ? a.y : a.subtrahend;
+                title = `${g1} ${a.op === 'add' ? '+' : '−'} ${g2} = ${a.op === 'add' ? a.sum : a.diff}`;
+                groups = [
+                    { size: g1, label: a.op === 'add' ? `Summand 1 (${g1})` : `Differenz (${a.diff})`, struck: false },
+                    { size: g2, label: a.op === 'add' ? `Summand 2 (${g2})` : `Subtrahend (durchgestrichen) (${g2})`, struck: (a.op === 'sub') }
+                ];
+            } else {
+                return;
+            }
+
+            const totalColored = groups.reduce((s, g) => s + g.size, 0);
+
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            overlay.innerHTML = `
+                <div class="modal" role="dialog" aria-modal="true">
+                    <div class="modal-header">
+                        <div style="display:none;"><strong>Aufgabe:</strong> ${title}</div>
+                        <div><button class="small-btn" id="toggle-numbers" aria-pressed="false">Zahlen einblenden</button>
+                             <button class="close-btn" id="close-modal">Schließen</button></div>
+                    </div>
+                    <div style="margin-top:8px; font-size:0.95em;">
+                        ${getVisualisierungstext(a)}
+                    </div>
+                    <div class="legende" id="legende-area" style="display:none;margin-top:6px;"></div>
+                    <div class="hundert-grid" id="hundert-grid" aria-hidden="false" style="margin-top:10px;"></div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const grid = overlay.querySelector('#hundert-grid');
+            const legende = overlay.querySelector('#legende-area');
+
+            // Legend entries for groups with correct ranges (mark struck in text)
+            let cum = 0;
+            groups.forEach((g, idx) => {
+                const start = cum + 1;
+                const end = cum + g.size;
+                cum += g.size;
+                const sw = document.createElement('div');
+                sw.style.display = 'flex';
+                sw.style.alignItems = 'center';
+                sw.style.gap = '6px';
+                const colorBox = document.createElement('span');
+                colorBox.className = 'swatch';
+                colorBox.style.background = colors[idx % colors.length];
+                colorBox.style.borderColor = shadeColor(colors[idx % colors.length], -20);
+                colorBox.title = g.label;
+                const txt = document.createElement('span');
+                txt.innerText = `${g.label} (Felder ${start}–${end})`;
+                if (g.struck) {
+                    const note = document.createElement('span');
+                    note.style.marginLeft = '8px';
+                    note.style.fontStyle = 'italic';
+                    note.style.color = '#444';
+                    note.innerText = '(durchgestrichen)';
+                    sw.appendChild(colorBox);
+                    sw.appendChild(txt);
+                    sw.appendChild(note);
+                } else {
+                    sw.appendChild(colorBox);
+                    sw.appendChild(txt);
+                }
+                legende.appendChild(sw);
+            });
+
+            // Fill grid: color contiguous blocks according to groups (first block, then second, ...)
+            let index = 1;
+            for (let gi = 0; gi < groups.length; gi++) {
+                const gsize = groups[gi].size;
+                const color = colors[gi % colors.length];
+                for (let k = 0; k < gsize; k++, index++) {
+                    if (index > 100) break;
+                    const cell = document.createElement('div');
+                    cell.className = 'hundert-cell product';
+                    const isGroupLast = (k === gsize - 1) || index === totalColored;
+                    cell.innerHTML = `<span class="num${isGroupLast ? ' group-last' : ''}">${index}</span>`;
+                    cell.style.background = color;
+                    cell.style.borderColor = shadeColor(color, -20);
+                    // If this group should be struck (only for subtraktion second group), add struck class
+                    if (groups[gi].struck) {
+                        cell.classList.add('struck');
+                    }
+                    grid.appendChild(cell);
+                }
+            }
+            // fill remaining cells up to 100
+            for (let i = index; i <= 100; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'hundert-cell';
+                cell.innerHTML = `<span class="num">${i}</span>`;
+                grid.appendChild(cell);
+            }
+
+            // Toggle-Button: 3-Zustände (0 versteckt, 1 letzte Zahl jeder Gruppe, 2 alle Zahlen)
+            const toggleBtn = overlay.querySelector('#toggle-numbers');
+            let toggleState = 0; // start: versteckt
+            const gridEl = overlay.querySelector('#hundert-grid');
+
+            function updateToggleUI() {
+                gridEl.classList.remove('show-numbers', 'show-last');
+                if (toggleState === 1) {
+                    gridEl.classList.add('show-last');
+                    toggleBtn.textContent = 'Alle Zahlen einblenden';
+                    toggleBtn.setAttribute('aria-pressed', 'true');
+                } else if (toggleState === 2) {
+                    gridEl.classList.add('show-numbers');
+                    toggleBtn.textContent = 'Zahlen ausblenden';
+                    toggleBtn.setAttribute('aria-pressed', 'true');
+                } else {
+                    toggleBtn.textContent = 'Zahlen einblenden';
+                    toggleBtn.setAttribute('aria-pressed', 'false');
+                }
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                toggleState = (toggleState + 1) % 3; // 0 -> 1 -> 2 -> 0 ...
+                updateToggleUI();
+            });
+
+            // initial UI
+            updateToggleUI();
+
+            // Prevent closing when clicking inside modal
+            overlay.querySelector('.modal').addEventListener('click', (e) => e.stopPropagation());
+            overlay.querySelector('#close-modal').addEventListener('click', () => overlay.remove());
+            overlay.addEventListener('click', () => overlay.remove());
+
+            // Hilfsfunktion: Farbton etwas abdunkeln für Border
+            function shadeColor(hex, percent) {
+                // hex e.g. #rrggbb
+                const num = parseInt(hex.replace('#',''),16);
+                let r = (num >> 16) + percent;
+                let g = ((num >> 8) & 0x00FF) + percent;
+                let b = (num & 0x0000FF) + percent;
+                r = Math.max(Math.min(255, r), 0);
+                g = Math.max(Math.min(255, g), 0);
+                b = Math.max(Math.min(255, b), 0);
+                return '#' + ( (1 << 24) + (r << 16) + (g << 8) + b ).toString(16).slice(1);
+            }
+        }
+
+
+        function getVisualisierungstext(a) {
+            if (a.op === 'mul') {
+                return `Die ${a.reihe * a.faktor} Felder sind in ${a.reihe} Gruppen zu je ${a.faktor} Feldern aufgeteilt.`;
+            } else if (a.op === 'div') {
+                return `Die ${a.dividend} Felder sind in ${a.reihe} gleich große Gruppen zu je ${a.faktor} Feldern aufgeteilt.`;
+            } else if (a.op === 'add' || a.op === 'sub') {
+                const g1 = a.op === 'add' ? a.x : a.diff;
+                const g2 = a.op === 'add' ? a.y : a.subtrahend;
+                return `Die Zahlen ${g1} und ${g2} sind farblich hervorgehoben.`;
+            }
+            return '';
+        }
+
+        // Initiale Aufgaben generieren und anzeigen
+        neueAufgaben();
+    </script>
+</body>
+</html>

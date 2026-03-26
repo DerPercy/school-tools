@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karteikarten Einmaleins</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f1f3f5; color: #212529; }
+    .card { max-width: 420px; margin: 20px auto; padding: 18px; background: #fff; border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    .question { font-size: 2rem; text-align: center; margin: 18px 0; }
+    .controls { display: grid; gap: 10px; margin-bottom: 12px; }
+    input[type=number] { width: 95%; font-size: 1.4rem; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; }
+    input[type=number].error { border-color: #dc3545; animation: shake 0.5s ease-in-out; }
+    button { padding: 10px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; }
+    button.primary { background: #0d6efd; color: white; }
+    button.secondary { background: #6c757d; color: white; }
+    button.warning { background: #ffc107; color: #212529; }
+    .message { text-align: center; font-weight: bold; min-height: 1.4em; }
+    .details { font-size: 0.9rem; color: #495057; margin-top: 10px; }
+    .points { font-size: 1.8rem; font-weight: bold; margin: 12px 0; text-align: center; padding: 10px; border-radius: 8px; background: #e9ecef; }
+    .points.changed { animation: pulsePoints 0.6s ease-in-out; background: #d1e7dd; color: #0f5132; }
+
+    .progress-container { margin: 12px 0; text-align: center; }
+    .progress-bar { width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #007bff; transition: width 0.3s ease; }
+    .progress-text { margin-top: 4px; font-size: 0.9rem; color: #495057; }
+
+    @keyframes pulsePoints {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    .stats { margin-top: 12px; font-size: 0.9rem; }
+    .stats span { display: inline-block; margin-right: 8px; }
+    #fbox { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+    .fach { padding: 6px 8px; border-radius: 6px; background: #e9ecef; text-align: center; }
+    </style>
+</head>
+<body>
+  <div class="card">
+    <div class="points" id="points">Punkte: 0</div>
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-text" id="progressText">Tägliche Karten: 0 / 40</div>
+    </div>
+
+    <div class="question" id="question">-- × -- = ?</div>
+
+    <div class="controls">
+      <input type="number" id="answer" placeholder="Antwort eingeben" autocomplete="off" />
+      <button class="primary" id="checkBtn">Prüfen</button>
+    </div>
+
+    <p class="message" id="message"></p>
+    <p class="details" id="details"></p>
+    <div class="stats" id="stats"></div>
+
+    <p>Fächerübersicht (insgesamt / fällig heute):</p>
+    <div id="fbox"></div>
+  </div>
+
+  <div class="card">
+    <h2>Fälligkeitsübersicht</h2>
+    <div id="dueOverview"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'leitnerEinmaleinsDeck';
+    const INTERVALS = [0, 1, 2, 5, 7, 14];
+    const questionEl = document.getElementById('question');
+    const answerEl = document.getElementById('answer');
+    const messageEl = document.getElementById('message');
+    const detailsEl = document.getElementById('details');
+    const statsEl = document.getElementById('stats');
+    const pointsEl = document.getElementById('points');
+    const progressFillEl = document.getElementById('progressFill');
+    const progressTextEl = document.getElementById('progressText');
+
+    let lastPoints = 0;
+    const fboxEl = document.getElementById('fbox');
+    const checkBtn = document.getElementById('checkBtn');
+
+    let deck = [];
+    let currentCard = null;
+    let dailyCount = 0;
+    let lastDate = dayStart();
+
+    function dayStart(time = Date.now()) {
+      const d = new Date(time);
+      d.setHours(0,0,0,0);
+      return d.getTime();
+    }
+
+    function formatDate(ts) {
+      const d = new Date(ts);
+      return d.toLocaleDateString('de-DE');
+    }
+
+    function addDays(base, days) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + days);
+      d.setHours(0,0,0,0);
+      return d.getTime();
+    }
+
+    function saveDeck() {
+      const data = {
+        deck,
+        dailyCount,
+        lastDate
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function loadDeck() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        return createDeck();
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.deck && Array.isArray(parsed.deck) && parsed.deck.length > 0) {
+          deck = parsed.deck.map((card, idx) => ({
+            id: card.id ?? idx + 1,
+            a: card.a ?? 1,
+            b: card.b ?? 1,
+            fach: Math.min(Math.max(card.fach ?? 1, 1), 5),
+            due: card.due ? dayStart(card.due) : dayStart(),
+            attempts: card.attempts ?? 0,
+            correct: card.correct ?? 0
+          }));
+          dailyCount = parsed.dailyCount ?? 0;
+          lastDate = parsed.lastDate ? dayStart(parsed.lastDate) : dayStart();
+          // Reset daily count if new day
+          const today = dayStart();
+          if (lastDate < today) {
+            dailyCount = 0;
+            lastDate = today;
+          }
+          return deck;
+        } else {
+          return createDeck();
+        }
+      } catch (e) {
+        return createDeck();
+      }
+    }
+
+    function createDeck() {
+      const today = dayStart();
+      deck = [];
+      let id = 1;
+      for (let a = 1; a <= 10; a++) {
+        for (let b = 1; b <= 10; b++) {
+          deck.push({ id, a, b, fach: 1, due: today, attempts: 0, correct: 0 });
+          id++;
+        }
+      }
+      saveDeck();
+      return deck;
+    }
+
+    function getDueCards() {
+      const today = dayStart();
+      return deck.filter(card => card.due <= today);
+    }
+
+    const POINTS = [0, 0, 3, 5, 7, 10];
+
+    function computePoints() {
+      return deck.reduce((sum, card) => {
+        return sum + POINTS[card.fach];
+      }, 0);
+    }
+
+    function updateDueOverview() {
+      const today = dayStart();
+      const tomorrow = addDays(today, 1);
+      const dayAfterTomorrow = addDays(today, 2);
+      const inThreeDays = addDays(today, 3);
+
+      const dueTomorrow = deck.filter(card => card.due === tomorrow).length;
+      const dueDayAfter = deck.filter(card => card.due === dayAfterTomorrow).length;
+      const dueInThree = deck.filter(card => card.due === inThreeDays).length;
+
+      const overviewEl = document.getElementById('dueOverview');
+      overviewEl.innerHTML = `
+        <p>Morgen (${formatDate(tomorrow)}): ${dueTomorrow} Karten</p>
+        <p>Übermorgen (${formatDate(dayAfterTomorrow)}): ${dueDayAfter} Karten</p>
+        <p>In 3 Tagen (${formatDate(inThreeDays)}): ${dueInThree} Karten</p>
+      `;
+    }
+
+    function updateOverview() {
+      const today = dayStart();
+      const fachCounts = [0,0,0,0,0,0];
+      const dueCounts = [0,0,0,0,0,0];
+
+      deck.forEach(card => {
+        fachCounts[card.fach]++; 
+        if (card.due <= today) dueCounts[card.fach]++;
+      });
+
+      fboxEl.innerHTML = '';
+      for (let f = 1; f <= 5; f++) {
+        const ws = document.createElement('div');
+        ws.className = 'fach';
+        ws.textContent = `Fach ${f}: ${fachCounts[f]} / fällig ${dueCounts[f]}`;
+        fboxEl.appendChild(ws);
+      }
+
+      const totalPoints = computePoints();
+      statsEl.innerHTML = `Gesamtkarten: ${deck.length}<br>fällig heute: ${getDueCards().length}`;
+
+      updateDueOverview();
+
+      if (pointsEl) {
+        pointsEl.textContent = `Punkte: ${totalPoints}`;
+        if (totalPoints !== lastPoints) {
+          pointsEl.classList.add('changed');
+          setTimeout(() => pointsEl.classList.remove('changed'), 650);
+        }
+        lastPoints = totalPoints;
+      }
+
+      // Update progress bar
+      const progressPercent = Math.min((dailyCount / 40) * 100, 100);
+      progressFillEl.style.width = `${progressPercent}%`;
+      progressTextEl.textContent = `Tägliche Karten: ${dailyCount} / 40`;
+    }
+
+    function setCard(card) {
+      if (!card) {
+        questionEl.textContent = 'Heute sind keine Karten fällig. Morgen weiter lernen!';
+        currentCard = null;
+        return;
+      }
+      currentCard = card;
+      questionEl.textContent = `${card.a} × ${card.b} = ?`;
+      answerEl.value = '';      answerEl.classList.remove('error'); // Entferne eventuelle error-Klasse      messageEl.textContent = '';
+      detailsEl.textContent = '';
+      answerEl.focus();
+    }
+
+    function selectDueCard() {
+      if (dailyCount >= 40) {
+        setCard(null);
+        messageEl.textContent = 'Tägliches Limit von 40 Karten erreicht. Morgen weiter!';
+        messageEl.style.color = '#dc3545';
+        return null;
+      }
+      const due = getDueCards();
+      if (due.length === 0) {
+        setCard(null);
+        return null;
+      }
+      const random = due[Math.floor(Math.random() * due.length)];
+      setCard(random);
+      return random;
+    }
+
+    function checkAnswer() {
+      if (!currentCard) {
+        messageEl.textContent = 'Keine Karte ausgewählt.';
+        messageEl.style.color = '#6c757d';
+        return;
+      }
+      if (dailyCount >= 40) {
+        messageEl.textContent = 'Tägliches Limit von 40 Karten erreicht. Morgen weiter!';
+        messageEl.style.color = '#dc3545';
+        return;
+      }
+      const val = Number(answerEl.value);
+      if (!Number.isInteger(val)) {
+        messageEl.textContent = 'Bitte eine ganze Zahl eingeben.';
+        messageEl.style.color = '#d63384';
+        return;
+      }
+      const expected = currentCard.a * currentCard.b;
+      currentCard.attempts++;
+      dailyCount++;
+      if (val === expected) {
+        currentCard.correct++;
+        currentCard.fach = Math.min(currentCard.fach + 1, 5);
+        currentCard.due = addDays(dayStart(), INTERVALS[currentCard.fach]);
+        messageEl.textContent = `Richtig! Karte wandert in Fach ${currentCard.fach}`;
+        messageEl.style.color = '#198754';
+      } else {
+        currentCard.fach = 1;
+        currentCard.due = addDays(dayStart(), 1);
+        messageEl.textContent = `Leider falsch. ${currentCard.a} × ${currentCard.b} = ${expected}. Karte geht zurück in Fach 1.`;
+        messageEl.style.color = '#dc3545';
+        // Visuelles Feedback: Shake-Effekt für Eingabefeld
+        answerEl.classList.add('error');
+        setTimeout(() => answerEl.classList.remove('error'), 500);
+      }
+      // Update deck entry (Referenzobjekt aktualisiert)
+      saveDeck();
+      updateOverview();
+      // Option: neue Karte sofort
+      selectDueCard();
+    }
+
+    checkBtn.addEventListener('click', checkAnswer);
+    answerEl.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        checkAnswer();
+      }
+    });
+
+    loadDeck();
+    updateOverview();
+    selectDueCard();
+  </script>
+</body>
+</html>
