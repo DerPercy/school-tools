@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mengenverständnis für Kinder</title>
+  <style>
+    :root {
+      --bg: #fff8e1;
+      --card: #ffffff;
+      --accent: #ff8a65;
+      --accent-2: #4fc3f7;
+      --accent-3: #81c784;
+      --text: #2f2f2f;
+      --muted: #6b7280;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #d84315;
+      font-size: 2rem;
+    }
+
+    .intro {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .chip {
+      background: #fff3e0;
+      border: 1px solid #ffcc80;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    button {
+      border: none;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+      background: var(--accent);
+    }
+
+    button.secondary {
+      background: var(--accent-2);
+    }
+
+    .task-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .task {
+      border: 1px solid #f6d18b;
+      border-radius: 16px;
+      padding: 16px;
+      background: #fffdf8;
+    }
+
+    .task p {
+      margin-top: 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .emoji-row {
+      font-size: 1.6rem;
+      letter-spacing: 0.2rem;
+      margin: 10px 0 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .two-col {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .mini-box {
+      border: 2px dashed #ffcc80;
+      border-radius: 12px;
+      padding: 8px 10px;
+      min-width: 70px;
+      text-align: center;
+      background: white;
+    }
+
+    .quantity-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 32px);
+      grid-template-rows: repeat(2, 32px);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .quantity-cell {
+      width: 32px;
+      height: 32px;
+      border: 2px solid #ffcc80;
+      border-radius: 8px;
+      background: #fff8e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+    }
+
+    .quantity-cell.filled {
+      background: #ffe082;
+    }
+
+    .visual-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .number-pill {
+      display: inline-block;
+      background: #ffe082;
+      color: #6d4c41;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .visual-label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .choice-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .choice-card {
+      border: 2px solid #ffcc80;
+      border-radius: 12px;
+      padding: 8px;
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      min-width: 90px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .choice-number {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #6d4c41;
+      margin-bottom: 4px;
+    }
+
+    .choice-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .choice-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    .choice-card.selected {
+      border-color: #ff7043;
+      background: #fff3e0;
+    }
+
+    input[type="number"], select {
+      padding: 8px 10px;
+      border: 1px solid #cfd8dc;
+      border-radius: 8px;
+      min-width: 90px;
+      font-size: 1rem;
+    }
+
+    .feedback {
+      margin-top: 8px;
+      font-weight: bold;
+    }
+
+    .feedback.correct { color: #2e7d32; }
+    .feedback.wrong { color: #c62828; }
+
+    .reward-card {
+      background: linear-gradient(135deg, #fff3e0 0%, #ffe082 100%);
+      border: 2px solid #ffcc80;
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reward-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: bold;
+      color: #6d4c41;
+    }
+
+    .reward-badge {
+      background: white;
+      border-radius: 999px;
+      padding: 6px 10px;
+      min-width: 70px;
+      text-align: center;
+    }
+
+    .reward-progress-track {
+      width: 100%;
+      height: 10px;
+      background: #ffe0b2;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .reward-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff8a65, #81c784);
+      transition: width 0.2s ease;
+    }
+
+    .reward-message {
+      margin-top: 6px;
+      color: #6d4c41;
+      font-size: 0.95rem;
+    }
+
+    .footer {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 12px; }
+      .page { padding: 16px; }
+      h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>🧮 Mengenverständnis</h1>
+    <p class="intro">
+    </p>
+
+    <div class="chip-row">
+      <span class="chip">✔️ zählen</span>
+      <span class="chip">✔️ mehr / weniger</span>
+      <span class="chip">✔️ gleich viele machen</span>
+      <span class="chip">✔️ in Gruppen teilen</span>
+    </div>
+
+    <div class="controls">
+      <button onclick="generateTasks()">🔄 Neue Aufgaben</button>
+      <button class="secondary" onclick="checkAnswers()">✅ Antworten prüfen</button>
+    </div>
+
+    <div class="reward-card">
+      <div class="reward-item">
+        <div class="reward-badge">⭐ <span id="stars-count">0</span></div>
+        <span>Sterne</span>
+      </div>
+      <div class="reward-item">
+        <div class="reward-badge">🔥 <span id="streak-count">1</span></div>
+        <span>Tagesserie</span>
+      </div>
+      <div class="reward-item">
+        <div class="reward-badge"><span id="today-count">0/5</span></div>
+        <span>heute</span>
+      </div>
+    </div>
+    <div class="reward-message" id="reward-message">Heute ist ein neuer Start – ein paar Aufgaben reichen schon für den ersten Stern.</div>
+    <div class="reward-progress-track">
+      <div class="reward-progress-bar" id="reward-progress"></div>
+    </div>
+
+    <div id="task-list" class="task-list"></div>
+
+    <div class="footer">
+      Tipp: Für noch mehr Freude kann man die Aufgaben mit echten Murmeln, Streichhölzern oder Bonbons nachmachen.
+    </div>
+  </div>
+
+  <script>
+    const tasks = [];
+    const rewardStorageKey = 'mengenverstaendnis-rewards';
+    let rewardState = {
+      stars: 0,
+      streak: 1,
+      lastPlayed: '',
+      todaySolved: 0
+    };
+    let rewardsAwardedForSession = false;
+
+    function loadRewardState() {
+      try {
+        const stored = localStorage.getItem(rewardStorageKey);
+        if (!stored) return rewardState;
+        const parsed = JSON.parse(stored);
+        return {
+          stars: parsed.stars || 0,
+          streak: parsed.streak || 1,
+          lastPlayed: parsed.lastPlayed || '',
+          todaySolved: parsed.todaySolved || 0
+        };
+      } catch (error) {
+        return rewardState;
+      }
+    }
+
+    function saveRewardState() {
+      localStorage.setItem(rewardStorageKey, JSON.stringify(rewardState));
+    }
+
+    function updateRewardUI() {
+      const target = 5;
+      const progress = Math.min(100, Math.round((rewardState.todaySolved / target) * 100));
+      document.getElementById('stars-count').textContent = rewardState.stars;
+      document.getElementById('streak-count').textContent = rewardState.streak;
+      document.getElementById('today-count').textContent = `${rewardState.todaySolved}/${target}`;
+      document.getElementById('reward-progress').style.width = `${progress}%`;
+
+      if (rewardState.todaySolved >= target) {
+        document.getElementById('reward-message').textContent = 'Super! Heute ist das Ziel geschafft. Morgen geht es weiter mit neuen Sternen.';
+      } else {
+        const remaining = Math.max(0, target - rewardState.todaySolved);
+        document.getElementById('reward-message').textContent = `Nur noch ${remaining} Aufgabe${remaining === 1 ? '' : 'n'} heute, dann gibt es schon wieder einen neuen Stern.`;
+      }
+    }
+
+    function awardRewards(correctCount) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (rewardState.lastPlayed && rewardState.lastPlayed !== today) {
+        const previous = new Date(rewardState.lastPlayed + 'T00:00:00');
+        const current = new Date(today + 'T00:00:00');
+        const diff = Math.round((current - previous) / 86400000);
+        rewardState.streak = diff === 1 ? rewardState.streak + 1 : 1;
+      } else if (!rewardState.lastPlayed) {
+        rewardState.streak = 1;
+      }
+
+      rewardState.lastPlayed = today;
+      rewardState.todaySolved += correctCount;
+      rewardState.stars += correctCount;
+      saveRewardState();
+      updateRewardUI();
+    }
+
+    rewardState = loadRewardState();
+    updateRewardUI();
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffleArray(values) {
+      const copy = [...values];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function renderQuantity(amount, emoji = '🔵', label = '', showNumber = true) {
+      const cells = [];
+      for (let i = 0; i < 10; i += 1) {
+        const filled = i < amount;
+        cells.push(`<div class="quantity-cell ${filled ? 'filled' : ''}">${filled ? emoji : ''}</div>`);
+      }
+
+      return `
+        <div class="visual-block">
+          <div class="quantity-grid">${cells.join('')}</div>
+          ${showNumber ? `<div class="number-pill">${label || amount}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function createTask() {
+      const type = ['count', 'equalize'][randomInt(0, 1)];
+
+      if (type === 'count') {
+        const count = randomInt(0, 10);
+        const emoji = ['🍎', '⭐', '🐻', '🌼', '🍋'][randomInt(0, 4)];
+        const distractors = shuffleArray(
+          Array.from({ length: 11 }, (_, index) => index).filter(value => value !== count)
+        ).slice(0, 4);
+        const options = shuffleArray([count, ...distractors]);
+
+        return {
+          type,
+          prompt: `Zähle die ${emoji}s. Wie viele sind es?`,
+          display: `
+            <div class="two-col">
+              ${renderQuantity(count, emoji, '', false)}
+            </div>
+          `,
+          answer: count,
+          input: `
+            <div class="choice-grid" data-role="answer">
+              ${options.map(value => `
+                <button type="button" class="choice-card" data-value="${value}" onclick="selectChoice(this)">
+                  <div class="choice-number">${value}</div>
+                </button>
+              `).join('')}
+            </div>
+          `
+        };
+      }
+
+      if (type === 'equalize') {
+        const current = randomInt(0, 10);
+        const needed = randomInt(1, 10 - current);
+        const target = current + needed;
+        const answer = needed;
+        const distractors = shuffleArray(
+          Array.from({ length: 11 }, (_, index) => index).filter(value => value !== answer)
+        ).slice(0, 4);
+        const options = shuffleArray([answer, ...distractors]);
+
+        return {
+          type,
+          prompt: `Du hast ${current} Murmeln. Wie viele brauchst du noch, damit es ${target} sind?`,
+          display: `
+            <div class="two-col">
+              <div class="visual-block">
+                <div class="visual-label">Jetzt</div>
+                ${renderQuantity(current, '🔵', `${current} Murmeln`)}
+              </div>
+              <span>→</span>
+              <div class="visual-block">
+                <div class="visual-label">Ziel</div>
+                ${renderQuantity(target, '🟡', `${target} Murmeln`)}
+              </div>
+            </div>
+          `,
+          answer,
+          input: `
+            <div class="choice-grid" data-role="answer">
+              ${options.map(value => `
+                <button type="button" class="choice-card" data-value="${value}" onclick="selectChoice(this)">
+                  <div class="choice-number">${value}</div>
+                  <div class="choice-hint">${renderQuantity(value, '🔵', '', false)}</div>
+                </button>
+              `).join('')}
+            </div>
+          `
+        };
+      }
+
+    }
+
+    function generateTasks() {
+      tasks.length = 0;
+      rewardsAwardedForSession = false;
+      for (let i = 0; i < 8; i += 1) {
+        tasks.push(createTask());
+      }
+      renderTasks();
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('task-list');
+      container.innerHTML = tasks.map((task, index) => `
+        <div class="task">
+          <p>${index + 1}. ${task.prompt}</p>
+          ${task.display}
+          ${task.input}
+          <div class="feedback" id="feedback-${index}"></div>
+        </div>
+      `).join('');
+    }
+
+    function selectChoice(button) {
+      const group = button.closest('[data-role="answer"]');
+      if (!group) return;
+      group.querySelectorAll('.choice-card').forEach(card => card.classList.remove('selected'));
+      button.classList.add('selected');
+      button.dataset.selected = 'true';
+    }
+
+    function checkAnswers() {
+      let correctCount = 0;
+
+      tasks.forEach((task, index) => {
+        const input = document.querySelector(`#task-list .task:nth-child(${index + 1}) [data-role="answer"]`);
+        const feedback = document.getElementById(`feedback-${index}`);
+        if (!input || !feedback) return;
+
+        let userValue = '';
+        if (task.type === 'count') {
+          const selected = input.querySelector('.choice-card.selected');
+          userValue = selected ? selected.getAttribute('data-value') : '';
+        } else {
+          const field = input.querySelector('input, select');
+          userValue = field ? field.value.trim() : '';
+        }
+
+        const isCorrect = Number(userValue) === task.answer;
+        if (isCorrect) {
+          correctCount += 1;
+        }
+
+        feedback.textContent = isCorrect ? 'Richtig! 😊' : `Nicht ganz. Die Lösung ist ${task.answer}.`;
+        feedback.className = `feedback ${isCorrect ? 'correct' : 'wrong'}`;
+      });
+
+      if (!rewardsAwardedForSession) {
+        rewardsAwardedForSession = true;
+        awardRewards(correctCount);
+      }
+    }
+
+    generateTasks();
+  </script>
+</body>
+</html>

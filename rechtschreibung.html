@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rechtschreib-Detektive</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #263445;
+      --muted: #627184;
+      --paper: #ffffff;
+      --background: #f0f7ff;
+      --blue: #2878c7;
+      --blue-light: #e8f3ff;
+      --green: #23804d;
+      --green-light: #e8f7ed;
+      --red: #b94141;
+      --red-light: #fff0ef;
+      --border: #d7e2ee;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(140deg, #eaf5ff, #f8f6ff);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    main {
+      width: min(100%, 760px);
+      margin: 0 auto;
+      padding: clamp(20px, 5vw, 40px);
+      border-radius: 22px;
+      background: var(--paper);
+      box-shadow: 0 12px 35px rgba(37, 68, 105, 0.12);
+    }
+
+    h1 { margin: 0 0 8px; color: #205b98; font-size: clamp(1.8rem, 5vw, 2.4rem); }
+    h2 { margin: 0; font-size: 1.25rem; }
+    p { line-height: 1.55; }
+    .intro { margin: 0 0 22px; color: var(--muted); }
+
+    .how-to {
+      padding: 14px 18px;
+      border-radius: 14px;
+      background: var(--blue-light);
+      line-height: 1.55;
+    }
+
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 24px 0 10px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #e8edf3;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #50b5df, #4a9b70);
+      transition: width 180ms ease;
+    }
+
+    .exercise {
+      margin-top: 20px;
+      padding: clamp(18px, 4vw, 26px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fcfdff;
+    }
+
+    .sentence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 6px;
+      margin: 22px 0;
+      font-size: clamp(1.25rem, 4vw, 1.65rem);
+      line-height: 1.8;
+    }
+
+    .word {
+      padding: 2px 6px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .word:hover:not(:disabled), .word:focus-visible {
+      border-color: #9dc9ef;
+      outline: none;
+      background: var(--blue-light);
+    }
+
+    .word.selected {
+      border-color: var(--blue);
+      background: #dbeeff;
+    }
+
+    .word.right-pick {
+      border-color: var(--green);
+      background: var(--green-light);
+    }
+
+    .word.missed {
+      border-color: #e2a13b;
+      background: #fff4dc;
+      text-decoration: underline wavy #d59024;
+    }
+
+    .word.wrong-pick {
+      border-color: var(--red);
+      background: var(--red-light);
+      text-decoration: line-through;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button.action {
+      min-height: 44px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.action:hover { filter: brightness(0.94); }
+    button.action:focus-visible { outline: 3px solid #f4bf52; outline-offset: 3px; }
+    button.secondary { background: #718198; }
+    button.next { background: var(--green); }
+
+    .feedback, .hint, .answers {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      line-height: 1.5;
+    }
+
+    .feedback { background: var(--blue-light); }
+    .feedback.good { background: var(--green-light); color: #185b36; }
+    .feedback.try-again { background: #fff4dc; color: #68460f; }
+    .hint { background: #fff8e8; }
+    .answers { background: #f1f8f3; }
+    .answers ul { margin: 8px 0 0; padding-left: 22px; }
+    [hidden] { display: none !important; }
+
+    .finish {
+      padding: 24px;
+      border-radius: 16px;
+      background: var(--green-light);
+      text-align: center;
+    }
+
+    .finish h2 { color: #185b36; }
+    .finish-score { font-size: 1.25rem; font-weight: 700; }
+
+    @media (max-width: 520px) {
+      body { padding: 12px; }
+      .progress-row { font-size: 0.92rem; }
+      .controls button { flex: 1 1 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Rechtschreib-Detektive 🕵️</h1>
+    <p class="intro">Übe Doppelkonsonanten, das Dehnungs-h und ck in Sätzen.</p>
+    <div class="how-to">
+      <strong>So geht's:</strong> Tippe oder klicke alle falsch geschriebenen Wörter an.
+      Achte besonders auf doppelte Mitlaute wie <strong>mm</strong>, das stumme <strong>h</strong>
+      und <strong>ck</strong>. Dann drückst du auf <strong>„Prüfen“</strong>.
+      Du kannst dir auch einen Tipp holen.
+    </div>
+
+    <div class="progress-row">
+      <span id="progress-label">Satz 1 von 8</span>
+      <span id="score-label">Gefundene Fehler: 0</span>
+    </div>
+    <div class="progress-track" role="progressbar" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <section class="exercise" id="exercise" aria-labelledby="task-title">
+      <h2 id="task-title">Welche Wörter sind falsch?</h2>
+      <div class="sentence" id="sentence" aria-label="Satz: Wähle die falsch geschriebenen Wörter aus"></div>
+      <div class="controls">
+        <button class="action" id="check-button" type="button">Prüfen</button>
+        <button class="action secondary" id="hint-button" type="button">Tipp anzeigen</button>
+        <button class="action next" id="next-button" type="button" hidden>Weiter</button>
+      </div>
+      <div class="hint" id="hint" hidden></div>
+      <div class="feedback" id="feedback" role="status" aria-live="polite" hidden></div>
+      <div class="answers" id="answers" hidden></div>
+    </section>
+
+    <section class="finish" id="finish" hidden aria-live="polite">
+      <h2>Super, du hast alle Sätze geschafft! 🎉</h2>
+      <p class="finish-score" id="final-score"></p>
+      <p>Mit jedem genauen Lesen wirst du sicherer. Möchtest du noch einmal üben?</p>
+      <button class="action" id="restart-button" type="button">Noch einmal spielen</button>
+    </section>
+  </main>
+
+  <script>
+    const exercises = [
+      {
+        words: ["Oma", "nimt", "den", "Stul", "und", "setzt", "sich", "neben", "den", "Ofen."],
+        errors: {
+          1: { word: "nimmt", hint: "Nach dem kurzen i steht ein doppeltes m." },
+          3: { word: "Stuhl", hint: "Das u klingt lang; in Stuhl steht ein stummes h." }
+        },
+        hint: "Höre genau hin: Ist der Selbstlaut kurz oder lang?"
+      },
+      {
+        words: ["Der", "kleine", "Frosch", "hüpft", "auf", "den", "Stok", "und", "quakt", "laut."],
+        errors: {
+          6: { word: "Stock", hint: "Nach dem kurzen o schreibt man Stock mit ck." }
+        },
+        hint: "Achte auf den kurzen Selbstlaut vor dem k."
+      },
+      {
+        words: ["Mila", "pakkt", "ihre", "Sachen", "in", "den", "Ruksak."],
+        errors: {
+          1: { word: "packt", hint: "Nach dem kurzen a kommt ck." },
+          6: { word: "Rucksack.", hint: "Das u ist kurz, deshalb schreibt man Rucksack mit ck." }
+        },
+        hint: "In beiden Fehlerwörtern hörst du nach einem kurzen Selbstlaut ein k."
+      },
+      {
+        words: ["Der", "Hund", "schwimt", "zum", "Ufer,", "dort", "steht", "ein", "Stul."],
+        errors: {
+          2: { word: "schwimmt", hint: "Nach dem kurzen i steht mm." },
+          8: { word: "Stuhl.", hint: "Das u wird lang gesprochen; Stuhl hat ein stummes h." }
+        },
+        hint: "Suche ein Wort mit doppeltem Mitlaut und eines mit Dehnungs-h."
+      },
+      {
+        words: ["Wir", "faren", "mit", "dem", "Fahrrad", "zum", "See", "und", "machen", "dort", "ein", "Piknik."],
+        errors: {
+          1: { word: "fahren", hint: "Das a klingt lang; in fahren steht ein stummes h." },
+          11: { word: "Picknick.", hint: "Picknick schreibt man mit ck." }
+        },
+        hint: "In einem Fehlerwort ist ein stummes h, im anderen ein ck versteckt."
+      },
+      {
+        words: ["Hanna", "stellt", "die", "Tase", "auf", "den", "Tisch", "und", "nimt", "einen", "Löffel."],
+        errors: {
+          3: { word: "Tasse", hint: "Nach dem kurzen a schreibt man ss." },
+          8: { word: "nimmt", hint: "Nach dem kurzen i steht mm." }
+        },
+        hint: "Achte auf den kurzen a- und i-Laut."
+      },
+      {
+        words: ["Unsere", "Lererin", "erzält", "eine", "spanende", "Geschichte."],
+        errors: {
+          1: { word: "Lehrerin", hint: "Das e klingt lang; in Lehrerin steht ein stummes h." },
+          2: { word: "erzählt", hint: "Das ä klingt lang; erzählt hat ein stummes h." },
+          4: { word: "spannende", hint: "Nach dem kurzen a steht nn." }
+        },
+        hint: "Achte auf Wörter mit langem e oder ä und auf einen kurzen Selbstlaut."
+      },
+      {
+        words: ["Der", "Bäcker", "schikt", "Max", "ein", "Paket", "mit", "selbst", "gebakenen", "Keksen."],
+        errors: {
+          2: { word: "schickt", hint: "Nach dem kurzen i kommt ck." },
+          8: { word: "gebackenen", hint: "Nach dem kurzen a schreibt man ck." }
+        },
+        hint: "Beide Wörter haben nach einem kurzen Selbstlaut den k-Laut."
+      }
+    ];
+
+    const sentenceElement = document.getElementById("sentence");
+    const progressLabel = document.getElementById("progress-label");
+    const scoreLabel = document.getElementById("score-label");
+    const progressBar = document.getElementById("progress-bar");
+    const progressTrack = document.querySelector('[role="progressbar"]');
+    const hintElement = document.getElementById("hint");
+    const feedbackElement = document.getElementById("feedback");
+    const answersElement = document.getElementById("answers");
+    const checkButton = document.getElementById("check-button");
+    const hintButton = document.getElementById("hint-button");
+    const nextButton = document.getElementById("next-button");
+    const exerciseSection = document.getElementById("exercise");
+    const finishSection = document.getElementById("finish");
+    let currentIndex = 0;
+    let foundErrors = 0;
+    let checked = false;
+
+    function renderExercise() {
+      const exercise = exercises[currentIndex];
+      sentenceElement.replaceChildren();
+      exercise.words.forEach((word, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "word";
+        button.textContent = word;
+        button.setAttribute("aria-pressed", "false");
+        button.setAttribute("aria-label", `Wort ${index + 1}: ${word}`);
+        button.addEventListener("click", () => {
+          if (checked) return;
+          const selected = button.classList.toggle("selected");
+          button.setAttribute("aria-pressed", String(selected));
+        });
+        sentenceElement.append(button);
+      });
+
+      progressLabel.textContent = `Satz ${currentIndex + 1} von ${exercises.length}`;
+      progressBar.style.width = `${(currentIndex / exercises.length) * 100}%`;
+      progressTrack.setAttribute("aria-valuenow", String(currentIndex));
+      scoreLabel.textContent = `Gefundene Fehler: ${foundErrors}`;
+      hintElement.hidden = true;
+      hintElement.textContent = "";
+      feedbackElement.hidden = true;
+      feedbackElement.className = "feedback";
+      answersElement.hidden = true;
+      answersElement.replaceChildren();
+      checkButton.hidden = false;
+      hintButton.hidden = false;
+      nextButton.hidden = true;
+      checked = false;
+    }
+
+    function checkAnswer() {
+      if (checked) return;
+      checked = true;
+      const exercise = exercises[currentIndex];
+      const selectedButtons = [...sentenceElement.querySelectorAll(".word")];
+      let correctCount = 0;
+      let missedCount = 0;
+      let wrongCount = 0;
+
+      selectedButtons.forEach((button, index) => {
+        const isError = Object.hasOwn(exercise.errors, index);
+        const isSelected = button.classList.contains("selected");
+        button.disabled = true;
+        button.classList.remove("selected");
+        if (isError && isSelected) {
+          button.classList.add("right-pick");
+          correctCount++;
+        } else if (isError) {
+          button.classList.add("missed");
+          missedCount++;
+        } else if (isSelected) {
+          button.classList.add("wrong-pick");
+          wrongCount++;
+        }
+      });
+
+      foundErrors += correctCount;
+      scoreLabel.textContent = `Gefundene Fehler: ${foundErrors}`;
+      const totalErrors = Object.keys(exercise.errors).length;
+      const isPerfect = correctCount === totalErrors && wrongCount === 0;
+      feedbackElement.hidden = false;
+      feedbackElement.className = `feedback ${isPerfect ? "good" : "try-again"}`;
+      feedbackElement.textContent = isPerfect
+        ? `Richtig! Du hast alle ${totalErrors} Fehler gefunden.`
+        : `Du hast ${correctCount} von ${totalErrors} Fehlern gefunden. Schau dir die markierten Wörter an und lies die Verbesserungen durch.`;
+
+      const list = document.createElement("ul");
+      Object.entries(exercise.errors).forEach(([index, correction]) => {
+        const item = document.createElement("li");
+        const original = exercise.words[Number(index)];
+        item.textContent = `${original} → ${correction.word} ${correction.hint}`;
+        list.append(item);
+      });
+      answersElement.replaceChildren(document.createTextNode("So werden die Wörter richtig geschrieben:"), list);
+      answersElement.hidden = false;
+      hintButton.hidden = true;
+      checkButton.hidden = true;
+      nextButton.hidden = false;
+      nextButton.textContent = currentIndex === exercises.length - 1 ? "Ergebnis ansehen" : "Weiter";
+
+      if (currentIndex === exercises.length - 1) {
+        progressBar.style.width = "100%";
+        progressTrack.setAttribute("aria-valuenow", String(exercises.length));
+      }
+    }
+
+    checkButton.addEventListener("click", checkAnswer);
+    hintButton.addEventListener("click", () => {
+      hintElement.textContent = `Tipp: ${exercises[currentIndex].hint}`;
+      hintElement.hidden = false;
+    });
+    nextButton.addEventListener("click", () => {
+      if (currentIndex === exercises.length - 1) {
+        exerciseSection.hidden = true;
+        finishSection.hidden = false;
+        document.getElementById("final-score").textContent =
+          `Du hast insgesamt ${foundErrors} von ${exercises.reduce((total, exercise) => total + Object.keys(exercise.errors).length, 0)} Fehlern entdeckt.`;
+        progressLabel.textContent = "Geschafft!";
+        progressBar.style.width = "100%";
+        progressTrack.setAttribute("aria-valuenow", String(exercises.length));
+      } else {
+        currentIndex++;
+        renderExercise();
+      }
+    });
+    document.getElementById("restart-button").addEventListener("click", () => {
+      currentIndex = 0;
+      foundErrors = 0;
+      finishSection.hidden = true;
+      exerciseSection.hidden = false;
+      renderExercise();
+    });
+
+    renderExercise();
+  </script>
+</body>
+</html>
